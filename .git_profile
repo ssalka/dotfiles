@@ -1,0 +1,187 @@
+# verbose aliases
+alias repo='gh browse --branch $(bn)'
+
+alias    gco='git checkout'
+
+alias     a='git add'
+alias    aa='git add .'
+alias    an='git add -N'
+alias    ap='git add -p'
+alias     b='git branch'
+alias    bn='git rev-parse --symbolic-full-name --abbrev-ref HEAD' # branch name
+alias    bd='git branch -D'
+alias    br='git branch -m'
+alias    co='checkout'
+alias   cob='git checkout -b'
+alias   cop='git checkout -p'
+alias   com='git checkout main'
+alias   chp='git cherry-pick'
+alias     c='git commit'
+alias    cm='git commit -m'
+alias   cam='git commit -am'
+alias   can='git commit --amend -n'
+alias    ca='git commit --amend'
+alias   caa='git commit -a --amend'
+alias    cl='clone'
+alias   clf='git clean -f'
+alias    cn='git clean -n'
+alias     d='git diff'
+alias    dc='git diff --cached'
+alias    gr='git grep -n'
+alias     l='git log'
+alias    lp='log_pretty'
+alias     m='git merge'
+alias    mm='git merge main'
+alias     p='git push'
+alias    ph='git push && gh browse'
+alias    po='git push origin'
+alias    pl='git pull'
+alias   plr='git pull --rebase'
+alias    pf='git push --force'
+alias   psu='git push --set-upstream origin $(bn)' # set upstream branch
+alias     r='git reset'
+alias    rh='git reset HEAD~'
+alias    rb='git rebase'
+alias    ra='git rebase —-abort'
+alias   rbc='git rebase --continue'
+alias   rbm='git rebase main'
+alias   ri2='git rebase -i HEAD~2'
+alias   ri3='git rebase -i HEAD~3'
+alias   ri4='git rebase -i HEAD~4'
+alias   ri5='git rebase -i HEAD~5'
+alias   ri6='git rebase -i HEAD~6'
+alias   ri7='git rebase -i HEAD~7'
+alias   ri8='git rebase -i HEAD~8'
+alias   ri9='git rebase -i HEAD~9'
+alias  ri10='git rebase -i HEAD~10'
+alias    rl='git reflog'
+alias    rv='git revert'
+alias     s='git status'
+alias    sh='git stash'
+alias    ss='git stash save'
+alias   ssk='git stash save --keep-index'
+alias    sp='git stash pop'
+alias   sp1='git stash pop stash@{1}'
+alias   sp2='git stash pop stash@{2}'
+alias   sp3='git stash pop stash@{3}'
+alias   sp4='git stash pop stash@{4}'
+alias   sp5='git stash pop stash@{5}'
+alias   sp6='git stash pop stash@{6}'
+alias   sp7='git stash pop stash@{7}'
+alias   sp8='git stash pop stash@{8}'
+alias   sp9='git stash pop stash@{9}'
+alias  sp10='git stash pop stash@{10}'
+alias    sl='git stash list'
+alias    sw='git show'
+
+
+# sequences
+alias    cmp='git checkout main && git pull'
+alias   aadc='git add . && git diff --cached'
+alias    apy='git add package.json yarn.lock'
+alias    adc='add_dep && git commit -m'
+alias     pb='psu && open "https://github.com/org/repo/compare/$(current_branch)?expand=1"'
+alias    wip='git add . && cm "wip" -n'
+
+alias current_branch='git rev-parse --symbolic-full-name --abbrev-ref HEAD'
+
+function gitroot() {
+  echo "$(git rev-parse --show-toplevel)"
+}
+
+# Usage: clone org/repo, eg `clone ssalka/dotfiles`
+function clone() {
+  if [[ -z "$1" ]]; then
+    echo "No repository provided. Example usage: `clone ssalka/dotfiles`"
+    exit 1
+  else
+    git clone git@github.com:"$1".git "$1"
+  fi
+}
+
+function checkout() {
+  if [[ $1 = '' ]]; then
+    CHECKOUT=.
+  else
+    CHECKOUT=`git branch | grep "$1" | xargs`
+  fi
+
+  git checkout $CHECKOUT
+}
+
+function log_pretty() {
+  git log --graph --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)%  %C(auto,blue)%>(16,trunc)%ad %C(auto,green)%<(16,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --decorate --abbrev-commit --date=relative
+}
+
+# open diffs in Cursor
+function odf() {
+  cdj
+  cursor $(git diff --name-only  | paste -sd " " -)
+}
+
+# Finds stashed changes with the given code change (searches actual code, not commit messages)
+find_stash() {
+  git stash list -S "$1"
+}
+
+# Show all commit messages from the current branch
+get_commit_messages() {
+  git log main.."$(bn)" --pretty=format:"%s"
+}
+
+branchhaspr() {
+  # query {
+  #   repository(owner: "ssalka", name: "dotfiles") {
+  #     pullRequests(headRefName: "$1", first: 1) {
+  #       totalCount
+  #       nodes {
+  #         headRefName
+  #         merged
+  #         number
+  #       }
+  #     }
+  #   }
+  # }
+  query="query { repository(owner: \\\"ssalka\\\", name: \\\"dotfiles\\\") { pullRequests(headRefName: \\\"$1\\\", first: 1) { totalCount nodes { headRefName merged number } } } }"
+
+  curl --silent -H "Authorization: bearer $GH_TOKEN" -X POST -d \
+    "{ \"query\": \"$query\" }" \
+    https://api.github.com/graphql
+}
+
+# Show all local branches that have been merged into main
+mergedbranches() {
+  b | while read branch ; do
+   res=$(branchhaspr $branch)
+   logmergedbranch $res
+  done
+}
+
+logmergedbranch() {
+  json="$1"
+  branch=$(echo $json | jq '.data.repository.pullRequests.nodes[0].headRefName')
+  merged=$(echo $json | jq '.data.repository.pullRequests.nodes[0].merged')
+  number=$(echo $json | jq '.data.repository.pullRequests.nodes[0].number')
+  count=$(echo $json | jq '.data.repository.pullRequests.totalCount')
+  if [ "$merged" = true ]; then
+    echo "Branch $branch was merged by PR #$number"
+  fi
+  if (( $count > 1 )); then
+    all_prs=$(echo $json | jq '.data.repository.pullRequests.nodes[0]. number')
+    echo "Branch $branch has $count PRs associated with it:"
+    echo $all_prs
+  fi
+}
+
+# better branch - shows branches that have been committed to recently
+bb() {
+  git branch --sort=-committerdate --format='%(committerdate:short)%09%(refname:short)%09%(contents:subject)' \
+    | head -n 15 \
+    | awk -F'\t' '{ printf "%s\t%-30s\t%s\n", $1, $2, $3 }' \
+    | column -t -s $'\t'
+}
+
+fix_merge_conflicts() {
+  cd $(gitroot)
+  cursor $(git status --short | grep '^UU' | cut -f2 -d' ' | xargs)
+}
