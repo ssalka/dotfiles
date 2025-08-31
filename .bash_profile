@@ -3,10 +3,13 @@
 # SETUP
 # 1. Install homebrew: https://brew.sh/
 # 2. Install other dependencies:
+# - brew install powerlevel10k
 # - brew install pls-rs/pls/pls
+# - brew install zoxide
 # - brew install jq
 # - brew install gource
 # - brew install ffmpeg
+# - brew install thefuck
 
 
 # Fun - run Gource on new repositories
@@ -30,7 +33,8 @@ alias rz='source ~/.zshrc'
 
 
 # Navigation/Finder/Filesystem utils
-alias cdc='cd ~/Code'
+alias  cdc='cd ~/Code'
+alias cddf='cd ~/Code/dotfiles'
 
 function cdgr() {
   cd "$(gitroot)" || return 1
