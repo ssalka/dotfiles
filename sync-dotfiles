@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Simple dotfiles sync script
+# Copies dotfiles from repo root to home directory
+# NOTE If you are not able to execute this script, run `chmod +x sync-dotfiles`
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define the source directory (repo root) and destination (home)
+SOURCE_DIR="$SCRIPT_DIR"
+DEST_DIR="$HOME"
+
+# List of dotfiles to sync
+DOTFILES=(".bash_profile" ".git_profile" ".zshrc")
+
+echo "Syncing dotfiles from \"$SOURCE_DIR\" to \"$DEST_DIR\"..."
+echo ""
+
+# Copy each dotfile
+for file in "${DOTFILES[@]}"; do
+    if [ -f "$SOURCE_DIR/$file" ]; then
+        cp "$SOURCE_DIR/$file" "$DEST_DIR/$file"
+        echo "✓ $file synced successfully"
+    else
+        echo "⚠ Warning: \"$file\" not found in source directory"
+    fi
+done
+
+echo ""
+echo "Dotfiles sync complete!"
